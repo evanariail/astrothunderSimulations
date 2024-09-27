@@ -1,4 +1,4 @@
-function[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum] = astrothunderMATLAB(grainOuterDiameter, grainInnerDiameter,grainLength, numGrains, throatDiameter)
+function[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum] = astrothunderMATLAB(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains, throatDiameter)
 
 %Constants
 charVel = 5020; %ft/s
@@ -13,7 +13,7 @@ ambientPressure = 14.7; %psi
 
 deltat = 0.001; %s
 
-
+%recursion: program runs until propellant weight = 0 (initPropWeight - sum(burnTime.*deltat)) or (propDensity*volume)
 
 
 end
