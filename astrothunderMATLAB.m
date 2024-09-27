@@ -1,4 +1,4 @@
-function astrothunderMATLAB
+function[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum] = astrothunderMATLAB(grainOuterDiameter, grainInnerDiameter,grainLength, numGrains, throatDiameter)
 
 %Constants
 charVel = 5020; %ft/s
