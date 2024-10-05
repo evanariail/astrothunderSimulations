@@ -6,7 +6,7 @@ burnRateCoef = 0.0375;
 burnRateExp = 0.3;
 propDensity = 0.0018; %slugs/in^3
 stagTemp = 4700; %R
-propSpecGasConstant = 200; %psi*ft^3/slugs*R
+propSpecGasConstant = 2000; %psi*ft^3/slugs*R
 ratioSpecHeats = 1.2;
 g = 32.2; %ft/s^2
 ambientPressure = 14.7; %psi
@@ -15,14 +15,12 @@ time = 0;
 i = 1;
 
 
-
+%Initial Calculations
 throatArea = pi*((throatDiameter/2)^2);
 grainWidth = grainOuterDiameter - grainInnerDiameter;   
-%recursion: program runs until propellant weight = 0 (initPropWeight - sum(burnTime.*deltat)) or (propDensity*volume)
-
 
 %Functions
-function [exposedBurnArea] = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength)
+function [exposedBurnArea] = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains)
     capArea = 0.25*pi*(grainOuterDiameter^2) - 0.25*pi*(grainInnerDiameter^2);
     innerGrainArea = pi*grainInnerDiameter*grainLength;
     exposedBurnArea = (2*capArea + innerGrainArea)*numGrains;
@@ -44,15 +42,27 @@ function [massFlowRate] = massFlowRateFunc(burnSurfaceRegressionRate, exposedBur
     massFlowRate = propDensity*exposedBurnArea*burnSurfaceRegressionRate;
 end
 
+function [exitMachNum] = exitMachNumFunc(MEOP)
+    pressureRatio = ambientPressure/MEOP;
+    exitMachNum = flowisentropic(ratioSpecHeats, pressureRatio, 'pres');
+end
+
+function [exhaustTemp] = exhaustTempFunc(exitMachNum)
+
+end
+
+
+
 %Stored Data
 initialSize = 1000;
 chamberPressureVec = zeros(1, initialSize);
+massFlowVec = zeros(1, initialSize);
 
 %Iteration Loop
 while grainWidth > 0  && grainLength > 0
 
     %Grain geometry calculations
-    exposedBurnArea = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength);
+    exposedBurnArea = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains)
     ratioInnerGrainAreaToThroatArea = burnToThroatFunc(exposedBurnArea, throatArea);
     
     %Chamber Pressure
@@ -64,6 +74,7 @@ while grainWidth > 0  && grainLength > 0
 
     %Mass Flow Rate
     massFlowRate = massFlowRateFunc(burnSurfaceRegressionRate, exposedBurnArea);
+    massFlowVec(i) = massFlowRate;
 
     %New Grain Geometry Calculations
     grainInnerDiameter = grainInnerDiameter + burnSurfaceRegressionRate*deltat;
@@ -77,16 +88,20 @@ while grainWidth > 0  && grainLength > 0
     %Checks if the number of iterations is greater than the number of preallocated values in the vectors, and if needed doubles the lengths of those vectors
     if i > length(chamberPressureVec)
         chamberPressureVec = [chamberPressureVec, zeros(1, initialSize)];
+        massFlowVec = [massFlowVec, zeros(1, initialSize)];
     end
 
     
 end
 
+%Final Calculations
+avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
+
 %Outputs
 totalImpulse = 'test';
 specificImpulse = 'test';
 MEOP = max(chamberPressureVec);
-avgChamPressure = 'test';
+avgChamPressure = avgChamberPressure;
 maxThrust = 'test';
 avgThrust = 'test';
 exhaustVel = 'test';
@@ -99,6 +114,10 @@ propWeight = 'test';
 volumetricLoadingFraction = 'test';
 optimumAreaPerfExpansionMEOP = 'test';
 ratioInnerGrainAreaToThroatArea = 'test';
-exitMachNum = 'test';
+exitMachNum = exitMachNumFunc(MEOP);
 
 end       
+
+
+%Test Case
+%[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum] = astrothunderMATLAB(1.8, 3.239, 7.5, 5, 1.25)
