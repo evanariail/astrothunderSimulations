@@ -48,6 +48,11 @@ function [exitMachNum] = exitMachNumFunc(MEOP)
 end
 
 %function [exhaustTemp] = exhaustTempFunc(exitMachNum)
+%    [~, tempRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'temp')
+%    exhaustTemp = stagTemp./tempRatio;
+%end
+
+%function [localSpeedofSound] = localSpeedOfSoundFunc(exhaustTemp)
 
 %end
 
@@ -63,15 +68,15 @@ thrustVec = zeros(1, initialSize);
 while grainWidth > 0  && grainLength > 0
 
     %Grain geometry calculations
-    exposedBurnArea = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains)
+    exposedBurnArea = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains);
     ratioInnerGrainAreaToThroatArea = burnToThroatFunc(exposedBurnArea, throatArea);
     
     %Chamber Pressure
-    chamberPressure = chamberPressureFunc(ratioInnerGrainAreaToThroatArea)
+    chamberPressure = chamberPressureFunc(ratioInnerGrainAreaToThroatArea);
     chamberPressureVec(i) = chamberPressure;
 
     %Burn Surface Regression Rate
-    burnSurfaceRegressionRate = burnSurfaceRegressionRateFunc(chamberPressure)
+    burnSurfaceRegressionRate = burnSurfaceRegressionRateFunc(chamberPressure);
 
     %Mass Flow Rate
     massFlowRate = massFlowRateFunc(burnSurfaceRegressionRate, exposedBurnArea);
@@ -98,11 +103,14 @@ end
 
 %Final Calculations
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
+MEOP = max(chamberPressureVec);
+exitMachNum = exitMachNumFunc(MEOP);
+%exhaustTemp = exhaustTempFunc(exitMachNum);
+
 
 %Outputs
 totalImpulse = 'test';
 specificImpulse = 'test';
-MEOP = max(chamberPressureVec);
 avgChamPressure = avgChamberPressure;
 maxThrust = 'test';
 avgThrust = 'test';
@@ -115,8 +123,8 @@ portThroatAreaRatio = 'test';
 propWeight = 'test';
 volumetricLoadingFraction = 'test';
 optimumAreaPerfExpansionMEOP = 'test';
-ratioInnerGrainAreaToThroatArea = 'test';
-exitMachNum = exitMachNumFunc(MEOP);
+%ratioInnerGrainAreaToThroatArea = ratioInnerGrainAreaToThroatArea;
+%exitMachNum found above
 
 end       
 
