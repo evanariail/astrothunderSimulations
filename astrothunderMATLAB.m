@@ -10,7 +10,7 @@ propSpecGasConstant = 2000; %psi*ft^3/slugs*R
 ratioSpecHeats = 1.2;
 g = 32.2; %ft/s^2
 ambientPressure = 14.7; %psi
-deltat = 0.1; %s
+deltat = 0.01; %s
 time = 0;
 i = 1;
 
@@ -47,9 +47,9 @@ function [exitMachNum] = exitMachNumFunc(MEOP)
     exitMachNum = flowisentropic(ratioSpecHeats, pressureRatio, 'pres');
 end
 
-function [exhaustTemp] = exhaustTempFunc(exitMachNum)
+%function [exhaustTemp] = exhaustTempFunc(exitMachNum)
 
-end
+%end
 
 
 
@@ -57,6 +57,7 @@ end
 initialSize = 1000;
 chamberPressureVec = zeros(1, initialSize);
 massFlowVec = zeros(1, initialSize);
+thrustVec = zeros(1, initialSize);
 
 %Iteration Loop
 while grainWidth > 0  && grainLength > 0
@@ -66,11 +67,11 @@ while grainWidth > 0  && grainLength > 0
     ratioInnerGrainAreaToThroatArea = burnToThroatFunc(exposedBurnArea, throatArea);
     
     %Chamber Pressure
-    chamberPressure = chamberPressureFunc(ratioInnerGrainAreaToThroatArea);
+    chamberPressure = chamberPressureFunc(ratioInnerGrainAreaToThroatArea)
     chamberPressureVec(i) = chamberPressure;
 
     %Burn Surface Regression Rate
-    burnSurfaceRegressionRate = burnSurfaceRegressionRateFunc(chamberPressure);
+    burnSurfaceRegressionRate = burnSurfaceRegressionRateFunc(chamberPressure)
 
     %Mass Flow Rate
     massFlowRate = massFlowRateFunc(burnSurfaceRegressionRate, exposedBurnArea);
@@ -89,6 +90,7 @@ while grainWidth > 0  && grainLength > 0
     if i > length(chamberPressureVec)
         chamberPressureVec = [chamberPressureVec, zeros(1, initialSize)];
         massFlowVec = [massFlowVec, zeros(1, initialSize)];
+        thrustVec = [thrustVec, zeros(1, initialSize)];
     end
 
     
