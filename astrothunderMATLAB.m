@@ -15,6 +15,7 @@ time = 0;
 i = 1;
 
 
+
 %Initial Calculations
 throatArea = pi*((throatDiameter/2)^2);
 grainWidth = grainOuterDiameter - grainInnerDiameter;   
@@ -63,6 +64,8 @@ initialSize = 1000;
 chamberPressureVec = zeros(1, initialSize);
 massFlowVec = zeros(1, initialSize);
 thrustVec = zeros(1, initialSize);
+timeVec = zeros(1, initialSize);
+%timeVec(1) = 0;
 
 %Iteration Loop
 while grainWidth > 0  && grainLength > 0
@@ -90,12 +93,14 @@ while grainWidth > 0  && grainLength > 0
     %Iteration
     time = time + deltat;
     i = i + 1;
+    timeVec(i) = time;
 
     %Checks if the number of iterations is greater than the number of preallocated values in the vectors, and if needed doubles the lengths of those vectors
     if i > length(chamberPressureVec)
         chamberPressureVec = [chamberPressureVec, zeros(1, initialSize)];
         massFlowVec = [massFlowVec, zeros(1, initialSize)];
         thrustVec = [thrustVec, zeros(1, initialSize)];
+        timeVec = [timeVec, zeros(1, initialSize)];
     end
 
     
@@ -106,7 +111,11 @@ avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
 MEOP = max(chamberPressureVec);
 exitMachNum = exitMachNumFunc(MEOP);
 %exhaustTemp = exhaustTempFunc(exitMachNum);
-
+plot(timeVec, chamberPressureVec)
+%plot(timeVec, massFlowVec)
+%plot(timeVec, thrustVec)
+[sizeTVecRow,sizeTVecColumn] = size(timeVec)
+[sizeCVecRow,sizeCVecColumn] = size(chamberPressureVec)
 
 %Outputs
 totalImpulse = 'test';
