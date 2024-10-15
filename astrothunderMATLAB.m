@@ -18,7 +18,9 @@ i = 1;
 
 %Initial Calculations
 throatArea = pi*((throatDiameter/2)^2);
-grainWidth = grainOuterDiameter./2 - grainInnerDiameter./2;   
+grainWidth = grainOuterDiameter./2 - grainInnerDiameter./2; 
+capArea = 0.25*pi*(grainOuterDiameter^2) - 0.25*pi*(grainInnerDiameter^2);
+propVolume = capArea*grainLength*numGrains;
 
 %Functions
 function [exposedBurnArea] = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains)
@@ -65,15 +67,16 @@ function [specificImpulse] = specificImpulseFunc(exhaustVel)
     specificImpulse = exhaustVel/g;
 end
 
-
+%function [exitArea] = exitAreaFunc(exitMachNum)
+    %[~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
+    %exitArea = areaRatio.*throatArea;
+%end
 
 %Stored Data
 initialSize = 1000;
 chamberPressureVec = zeros(1, initialSize);
 massFlowVec = zeros(1, initialSize);
-thrustVec = zeros(1, initialSize);
 timeVec = zeros(1, initialSize);
-%timeVec(1) = 0;
 
 %Iteration Loop
 while grainWidth > 0  && grainLength > 0
@@ -107,12 +110,19 @@ while grainWidth > 0  && grainLength > 0
     if i > length(chamberPressureVec)
         chamberPressureVec = [chamberPressureVec, zeros(1, initialSize)];
         massFlowVec = [massFlowVec, zeros(1, initialSize)];
-        thrustVec = [thrustVec, zeros(1, initialSize)];
         timeVec = [timeVec, zeros(1, initialSize)];
     end
 
     
 end
+
+%Removes zeros at the end of the vectors
+chamberPressureVecMask = chamberPressureVec ~= 0;
+chamberPressureVec = chamberPressureVec(chamberPressureVecMask);
+massFlowVecMask = massFlowVec ~= 0;
+massFlowVec = massFlowVec(massFlowVecMask);
+timeVecMask = timeVec ~= 0;
+timeVec = timeVec(timeVecMask);
 
 %Final Calculations
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
@@ -122,28 +132,43 @@ exhaustTemp = exhaustTempFunc(exitMachNum);
 localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
 exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
 specificImpulse = specificImpulseFunc(exhaustVel);
+propWeight = propDensity.*propVolume*32.174;
+%exitArea = exitAreaFunc(exitMachNum);
+thrustVec = exhaustVel.*massFlowVec; %ASSUMES PERFECT EXPANSION SO EXIT PRESSURE = AMBIENT PRESSURE SO Ae(Pe - Pa) = 0, SO THRUST = mdot*exitVel ONLY. PLEASE CHANGE IF NOT PERFECTLY EXPANDED
+averageThrust = sum(thrustVec)./length(thrustVec);
+maxThrust = max(thrustVec);
+
+
+
+%Graphing
+figure;
 plot(timeVec, chamberPressureVec);
-%plot(timeVec, massFlowVec)
-%plot(timeVec, thrustVec)
+title('Pressure Chamber vs. Time');
+figure;
+plot(timeVec, massFlowVec);
+title('Mass Flow Rate vs. Time');
+figure;
+plot(timeVec, thrustVec);
+title('Thrust vs. Time');
 
 %Outputs
 totalImpulse = 'test';
-%specificImpulse found above
-avgChamPressure = avgChamberPressure;
-maxThrust = 'test';
-avgThrust = 'test';
-%exhaustVel found above 
-burnTime = 'test';
+specificImpulse = [num2str(specificImpulse) ' s'];
+avgChamPressure = [num2str(avgChamberPressure) ' psi'];
+maxThrust = [num2str(maxThrust) ' lbs'];
+avgThrust = [num2str(averageThrust) ' lbs'];
+exhaustVel = [num2str(exhaustVel) ' ft / s'];
+burnTime = [num2str(time) ' s'];
 maxMassFlux = 'test';
 rocketImpulseClass = 'test';
 designPressureRatio = 'test';
 portThroatAreaRatio = 'test';
-propWeight = 'test';
+propWeight = [num2str(propWeight) ' lbs'];
 volumetricLoadingFraction = 'test';
 optimumAreaPerfExpansionMEOP = 'test';
-%ratioInnerGrainAreaToThroatArea = ratioInnerGrainAreaToThroatArea;
-%exitMachNum found above
-exitTemp = exhaustTemp;
+ratioInnerGrainAreaToThroatArea = 'test';
+exitMachNum = num2str(exitMachNum);
+exitTemp = [num2str(exhaustTemp) ' R'];
 
 end       
 
