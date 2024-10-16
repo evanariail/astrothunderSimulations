@@ -10,7 +10,7 @@ propSpecGasConstant = 2000; %psi*ft^3/slugs*R
 ratioSpecHeats = 1.2;
 g = 32.2; %ft/s^2
 ambientPressure = 14.7; %psi
-deltat = 0.01; %s
+deltat = 0.001; %s
 time = 0;
 i = 1;
 
@@ -67,10 +67,15 @@ function [specificImpulse] = specificImpulseFunc(exhaustVel)
     specificImpulse = exhaustVel/g;
 end
 
-%function [exitArea] = exitAreaFunc(exitMachNum)
-    %[~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
-    %exitArea = areaRatio.*throatArea;
-%end
+function [exitArea] = exitAreaFunc(exitMachNum)
+    [~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach')
+    exitArea = areaRatio.*throatArea;
+end
+
+function [exitPressure] = exitPressureFunc(exitMachNum)
+    [~, ~, pressureRatioExit] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
+    exitPressure = MEOP.*pressureRatioExit;
+end
 
 %Stored Data
 initialSize = 1000;
@@ -124,18 +129,20 @@ massFlowVec = massFlowVec(massFlowVecMask);
 timeVecMask = timeVec ~= 0;
 timeVec = timeVec(timeVecMask);
 
+
 %Final Calculations
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
 MEOP = max(chamberPressureVec);
 exitMachNum = exitMachNumFunc(MEOP);
 exhaustTemp = exhaustTempFunc(exitMachNum);
-localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
+localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp)
 exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
 specificImpulse = specificImpulseFunc(exhaustVel);
 propWeight = propDensity.*propVolume*32.174;
-%exitArea = exitAreaFunc(exitMachNum);
-thrustVec = exhaustVel.*massFlowVec; %ASSUMES PERFECT EXPANSION SO EXIT PRESSURE = AMBIENT PRESSURE SO Ae(Pe - Pa) = 0, SO THRUST = mdot*exitVel ONLY. PLEASE CHANGE IF NOT PERFECTLY EXPANDED
-averageThrust = sum(thrustVec)./length(thrustVec);
+exitArea = exitAreaFunc(exitMachNum);
+exitPressure = exitPressureFunc(exitMachNum);
+thrustVec = (exhaustVel.*massFlowVec) + (exitArea.*(exitPressure - ambientPressure));
+averageThrust = sum(thrustVec*deltat)./time;
 maxThrust = max(thrustVec);
 
 
@@ -174,4 +181,4 @@ end
 
 
 %Test Case
-%[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum, exitTemp] = astrothunderMATLAB(1.8, 3.239, 7.5, 5, 1.25)
+%[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum, exitTemp] = astrothunderMATLAB(1.8, 3.239, 7.5, 5, 1.25)  
