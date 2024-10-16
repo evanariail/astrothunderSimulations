@@ -13,6 +13,7 @@ ambientPressure = 14.7; %psi
 deltat = 0.001; %s
 time = 0;
 i = 1;
+exitArea = 7.1967; %in
 
 
 
@@ -21,6 +22,7 @@ throatArea = pi*((throatDiameter/2)^2);
 grainWidth = grainOuterDiameter./2 - grainInnerDiameter./2; 
 capArea = 0.25*pi*(grainOuterDiameter^2) - 0.25*pi*(grainInnerDiameter^2);
 propVolume = capArea*grainLength*numGrains;
+areaRatio = exitArea./throatArea;
 
 %Functions
 function [exposedBurnArea] = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains)
@@ -45,9 +47,13 @@ function [massFlowRate] = massFlowRateFunc(burnSurfaceRegressionRate, exposedBur
     massFlowRate = propDensity*exposedBurnArea*burnSurfaceRegressionRate;
 end
 
-function [exitMachNum] = exitMachNumFunc(chamberPressure)
-    pressureRatio = ambientPressure/chamberPressure;
-    exitMachNum = flowisentropic(ratioSpecHeats, pressureRatio, 'pres');
+function [exitMachNum] = exitMachNumFunc(areaRatio)
+    exitMachNum = flowisentropic(ratioSpecHeats, areaRatio, 'sup');
+end
+
+function [pressureRatioExit, exitPressure] = exitPressureFunc(exitMachNum)
+    [~, ~, pressureRatioExit] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
+    exitPressure = chamberPressure.*pressureRatioExit;
 end
 
 function [exhaustTemp] = exhaustTempFunc(exitMachNum)
@@ -67,15 +73,10 @@ function [specificImpulse] = specificImpulseFunc(exhaustVel)
     specificImpulse = exhaustVel/g;
 end
 
-function [exitArea] = exitAreaFunc(exitMachNum)
-    [~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
-    exitArea = areaRatio.*throatArea;
-end
-
-function [exitPressure] = exitPressureFunc(exitMachNum)
-    [~, ~, pressureRatioExit] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
-    exitPressure = chamberPressure.*pressureRatioExit;
-end
+%function [exitArea] = exitAreaFunc(exitMachNum)
+ %   [~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
+ %   exitArea = areaRatio.*throatArea;
+%end
 
 function [thrust] = thrustFunc(massFlowRate, exhaustVel, exitArea, exitPressure)
     thrust = (exhaustVel.*massFlowRate) + (exitArea.*(exitPressure - ambientPressure));
@@ -108,15 +109,16 @@ while grainWidth > 0  && grainLength > 0
     massFlowVec(i) = massFlowRate;
 
     %Exhaust Velocity
-    exitMachNum = exitMachNumFunc(chamberPressure);
+    exitMachNum = exitMachNumFunc(areaRatio);
+    [exitPressureRatio, exitPressure] = exitPressureFunc(exitMachNum);
+
     exhaustTemp = exhaustTempFunc(exitMachNum);
     localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
     exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
     exhaustVelVec(i) = exhaustVel;
 
-    exitArea = exitAreaFunc(exitMachNum);
-    exitPressure = exitPressureFunc(exitMachNum);
-
+    %exitArea = exitAreaFunc(exitMachNum);
+    
     %Thrust
     thrust = thrustFunc(massFlowRate, exhaustVel, exitArea, exitPressure);
     thrustVec(i) = thrust;
@@ -159,7 +161,7 @@ exhaustVelVec = exhaustVelVec(exhaustVelVecMask);
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
 avgExhaustVel = sum(exhaustVelVec)./length(exhaustVelVec);
 MEOP = max(chamberPressureVec);
-exitMachNum = exitMachNumFunc(MEOP);
+exitMachNum = exitMachNumFunc(areaRatio);
 exhaustTemp = exhaustTempFunc(exitMachNum);
 localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
 exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
@@ -205,3 +207,4 @@ end
 
 %Test Case
 %[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum, exitTemp] = astrothunderMATLAB(1.8, 3.239, 7.5, 5, 1.25)  
+%MAKE AN EXIT PRESSURE VECTOR TO REPLACE EXIT VELOCITY VECTOR
