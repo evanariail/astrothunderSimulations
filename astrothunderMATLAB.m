@@ -45,8 +45,8 @@ function [massFlowRate] = massFlowRateFunc(burnSurfaceRegressionRate, exposedBur
     massFlowRate = propDensity*exposedBurnArea*burnSurfaceRegressionRate;
 end
 
-function [exitMachNum] = exitMachNumFunc(MEOP)
-    pressureRatio = ambientPressure/MEOP;
+function [exitMachNum] = exitMachNumFunc(chamberPressure)
+    pressureRatio = ambientPressure/chamberPressure;
     exitMachNum = flowisentropic(ratioSpecHeats, pressureRatio, 'pres');
 end
 
@@ -68,13 +68,17 @@ function [specificImpulse] = specificImpulseFunc(exhaustVel)
 end
 
 function [exitArea] = exitAreaFunc(exitMachNum)
-    [~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach')
+    [~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
     exitArea = areaRatio.*throatArea;
 end
 
 function [exitPressure] = exitPressureFunc(exitMachNum)
     [~, ~, pressureRatioExit] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
-    exitPressure = MEOP.*pressureRatioExit;
+    exitPressure = chamberPressure.*pressureRatioExit;
+end
+
+function [thrust] = thrustFunc(massFlowRate, exhaustVel, exitArea, exitPressure)
+    thrust = (exhaustVel.*massFlowRate) + (exitArea.*(exitPressure - ambientPressure));
 end
 
 %Stored Data
@@ -82,6 +86,8 @@ initialSize = 1000;
 chamberPressureVec = zeros(1, initialSize);
 massFlowVec = zeros(1, initialSize);
 timeVec = zeros(1, initialSize);
+thrustVec = zeros(1, initialSize);
+exhaustVelVec = zeros(1, initialSize);
 
 %Iteration Loop
 while grainWidth > 0  && grainLength > 0
@@ -101,6 +107,20 @@ while grainWidth > 0  && grainLength > 0
     massFlowRate = massFlowRateFunc(burnSurfaceRegressionRate, exposedBurnArea);
     massFlowVec(i) = massFlowRate;
 
+    %Exhaust Velocity
+    exitMachNum = exitMachNumFunc(chamberPressure);
+    exhaustTemp = exhaustTempFunc(exitMachNum);
+    localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
+    exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
+    exhaustVelVec(i) = exhaustVel;
+
+    exitArea = exitAreaFunc(exitMachNum);
+    exitPressure = exitPressureFunc(exitMachNum);
+
+    %Thrust
+    thrust = thrustFunc(massFlowRate, exhaustVel, exitArea, exitPressure);
+    thrustVec(i) = thrust;
+
     %New Grain Geometry Calculations
     grainInnerDiameter = grainInnerDiameter + 2*burnSurfaceRegressionRate*deltat;
     grainLength = grainLength - 2*burnSurfaceRegressionRate*deltat;
@@ -116,6 +136,8 @@ while grainWidth > 0  && grainLength > 0
         chamberPressureVec = [chamberPressureVec, zeros(1, initialSize)];
         massFlowVec = [massFlowVec, zeros(1, initialSize)];
         timeVec = [timeVec, zeros(1, initialSize)];
+        thrustVec = [thrustVec, zeros(1, initialSize)];
+        exhaustVelVec = [exhaustVelVec, zeros(1, initialSize)];
     end
 
     
@@ -128,21 +150,22 @@ massFlowVecMask = massFlowVec ~= 0;
 massFlowVec = massFlowVec(massFlowVecMask);
 timeVecMask = timeVec ~= 0;
 timeVec = timeVec(timeVecMask);
-
+thrustVecMask = thrustVec ~= 0;
+thrustVec = thrustVec(thrustVecMask);
+exhaustVelVecMask = exhaustVelVec ~= 0;
+exhaustVelVec = exhaustVelVec(exhaustVelVecMask);
 
 %Final Calculations
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
+avgExhaustVel = sum(exhaustVelVec)./length(exhaustVelVec);
 MEOP = max(chamberPressureVec);
 exitMachNum = exitMachNumFunc(MEOP);
 exhaustTemp = exhaustTempFunc(exitMachNum);
-localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp)
+localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
 exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
-specificImpulse = specificImpulseFunc(exhaustVel);
+specificImpulse = specificImpulseFunc(avgExhaustVel);
 propWeight = propDensity.*propVolume*32.174;
-exitArea = exitAreaFunc(exitMachNum);
-exitPressure = exitPressureFunc(exitMachNum);
-thrustVec = (exhaustVel.*massFlowVec) + (exitArea.*(exitPressure - ambientPressure));
-averageThrust = sum(thrustVec*deltat)./time;
+averageThrust = sum(thrustVec)./length(thrustVec);
 maxThrust = max(thrustVec);
 
 
