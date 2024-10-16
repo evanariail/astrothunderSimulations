@@ -53,11 +53,6 @@ function [exitMachNum, exhaustTemp, exitPressure] = isentropicFunc(areaRatio)
     exitPressure = chamberPressure.*pressureRatioExit;
 end
 
-%function [pressureRatioExit, exitPressure] = exitPressureFunc(exitMachNum)
-%    [~, ~, pressureRatioExit] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
-%    exitPressure = chamberPressure.*pressureRatioExit;
-%end
-
 function [localSpeedofSound] = localSpeedOfSoundFunc(exhaustTemp)
     localSpeedofSound = sqrt(ratioSpecHeats*propSpecGasConstant*exhaustTemp);
 end
@@ -71,8 +66,8 @@ function [specificImpulse] = specificImpulseFunc(thrustVec, massFlowVec)
 end
 
 %function [exitArea] = exitAreaFunc(exitMachNum)
- %   [~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
- %   exitArea = areaRatio.*throatArea;
+    %[~, ~, ~, ~, areaRatio] = flowisentropic(ratioSpecHeats, exitMachNum, 'mach');
+    %exitArea = areaRatio.*throatArea;
 %end
 
 function [thrust] = thrustFunc(massFlowRate, exhaustVel, exitArea, exitPressure)
@@ -85,7 +80,6 @@ chamberPressureVec = zeros(1, initialSize);
 massFlowVec = zeros(1, initialSize);
 timeVec = zeros(1, initialSize);
 thrustVec = zeros(1, initialSize);
-exhaustVelVec = zeros(1, initialSize);
 exitPressureVec = zeros(1, initialSize);
 
 %Iteration Loop
@@ -112,9 +106,6 @@ while grainWidth > 0  && grainLength > 0
     
     localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
     exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);    
-    exhaustVelVec(i) = exhaustVel;
-
-    %exitArea = exitAreaFunc(exitMachNum);
     
     %Thrust
     thrust = thrustFunc(massFlowRate, exhaustVel, exitArea, exitPressure);
@@ -136,7 +127,6 @@ while grainWidth > 0  && grainLength > 0
         massFlowVec = [massFlowVec, zeros(1, initialSize)];
         timeVec = [timeVec, zeros(1, initialSize)];
         thrustVec = [thrustVec, zeros(1, initialSize)];
-        exhaustVelVec = [exhaustVelVec, zeros(1, initialSize)];
         exitPressureVec = [exitPressureVec, zeros(1, initialSize)];
     end
 
@@ -152,20 +142,20 @@ timeVecMask = timeVec ~= 0;
 timeVec = timeVec(timeVecMask);
 thrustVecMask = thrustVec ~= 0;
 thrustVec = thrustVec(thrustVecMask);
-exhaustVelVecMask = exhaustVelVec ~= 0;
-exhaustVelVec = exhaustVelVec(exhaustVelVecMask);
 
 %Final Calculations
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
-avgExhaustVel = sum(exhaustVelVec)./length(exhaustVelVec);
 MEOP = max(chamberPressureVec);
-[exitMachNum, exhaustTemp, exitPressure] = isentropicFunc(areaRatio);
+[exitMachNum, exhaustTemp, ~] = isentropicFunc(areaRatio); 
 localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
 exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
 specificImpulse = specificImpulseFunc(thrustVec, massFlowVec);
 propWeight = propDensity.*propVolume*32.174;
 averageThrust = sum(thrustVec)./length(thrustVec);
 maxThrust = max(thrustVec);
+
+%If re-calculating optimal exit Area ====> Uncomment the exit area function and the line below.
+%exitArea = exitAreaFunc(exitMachNum);
 
 
 
@@ -182,26 +172,26 @@ title('Thrust vs. Time');
 
 %Outputs
 totalImpulse = 'test';
-specificImpulse = [num2str(specificImpulse) ' s'];
-avgChamPressure = [num2str(avgChamberPressure) ' psi'];
-maxThrust = [num2str(maxThrust) ' lbs'];
-avgThrust = [num2str(averageThrust) ' lbs'];
-exhaustVel = [num2str(exhaustVel) ' ft / s'];
-burnTime = [num2str(time) ' s'];
+specificImpulse = sprintf('Specific Impulse: %.4f R', specificImpulse);
+MEOP = sprintf('Maximum Expected Engine Operating Pressure: %.4f psi', MEOP);
+avgChamPressure = sprintf('Average Chamber Pressure: %.4f psi', avgChamberPressure);
+maxThrust = sprintf('Maximum Thrust: %.4f lbs', maxThrust);
+avgThrust = sprintf('Average Thrust: %.4f lbs', averageThrust);
+exhaustVel = sprintf('Maximum Exhaust Velocity: %.4f ft / s', exhaustVel);
+burnTime = sprintf('Burn Time: %.4f s', time);
 maxMassFlux = 'test';
 rocketImpulseClass = 'test';
 designPressureRatio = 'test';
 portThroatAreaRatio = 'test';
-propWeight = [num2str(propWeight) ' lbs'];
+propWeight = sprintf('Propellant Weight: %.4f lbs', propWeight);
 volumetricLoadingFraction = 'test';
-optimumAreaPerfExpansionMEOP = 'test';
+optimumAreaPerfExpansionMEOP = sprintf('Optimum Exit Area for Perfect Expansion: %.4f in ^ 2', exitArea);
 ratioInnerGrainAreaToThroatArea = 'test';
-exitMachNum = num2str(exitMachNum);
-exitTemp = [num2str(exhaustTemp) ' R'];
+exitMachNum = sprintf('Exit Mach Number: %.4f', exitMachNum);
+exitTemp = sprintf('Exhaust Temperature: %.4f R', exhaustTemp);
 
 end       
 
 
 %Test Case
 %[totalImpulse, specificImpulse, MEOP, avgChamPressure, maxThrust, avgThrust, exhaustVel, burnTime, maxMassFlux, rocketImpulseClass, designPressureRatio, portThroatAreaRatio, propWeight, volumetricLoadingFraction, optimumAreaPerfExpansionMEOP, ratioInnerGrainAreaToThroatArea, exitMachNum, exitTemp] = astrothunderMATLAB(1.8, 3.239, 7.5, 5, 1.25)  
-%MAKE AN EXIT PRESSURE VECTOR TO REPLACE EXIT VELOCITY VECTOR
