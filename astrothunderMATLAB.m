@@ -23,6 +23,8 @@ grainWidth = grainOuterDiameter./2 - grainInnerDiameter./2;
 capArea = 0.25*pi*(grainOuterDiameter^2) - 0.25*pi*(grainInnerDiameter^2);
 propVolume = capArea*grainLength*numGrains;
 areaRatio = exitArea./throatArea;
+chamberVolume = (0.25*pi*(grainOuterDiameter^2))*(grainLength*numGrains);
+portArea = pi*(grainInnerDiameter./2)^2;
 
 %Functions
 function [exposedBurnArea] = exposedBurnAreaFunc(grainOuterDiameter, grainInnerDiameter, grainLength, numGrains)
@@ -47,7 +49,7 @@ function [massFlowRate] = massFlowRateFunc(burnSurfaceRegressionRate, exposedBur
     massFlowRate = propDensity*exposedBurnArea*burnSurfaceRegressionRate;
 end
 
-function [exitMachNum, exhaustTemp, exitPressure] = isentropicFunc(areaRatio)
+function [exitMachNum, exhaustTemp, exitPressure, pressureRatioExit] = isentropicFunc(areaRatio)
     [exitMachNum, tempRatio, pressureRatioExit] = flowisentropic(ratioSpecHeats, areaRatio, 'sup');
     exhaustTemp = stagTemp.*tempRatio;
     exitPressure = chamberPressure.*pressureRatioExit;
@@ -72,6 +74,10 @@ end
 
 function [thrust] = thrustFunc(massFlowRate, exhaustVel, exitArea, exitPressure)
     thrust = (exhaustVel.*massFlowRate) + (exitArea.*(exitPressure - ambientPressure));
+end
+
+function [totalImpulse] = totalImpulseFunc(thrustVec)
+    totalImpulse = sum(thrustVec).*deltat;
 end
 
 %Stored Data
@@ -101,7 +107,7 @@ while grainWidth > 0  && grainLength > 0
     massFlowVec(i) = massFlowRate;
 
     %Exhaust Velocity
-    [exitMachNum, exhaustTemp, exitPressure] = isentropicFunc(areaRatio);
+    [exitMachNum, exhaustTemp, exitPressure, ~] = isentropicFunc(areaRatio);
     exitPressureVec(i) = exitPressure;
     
     localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
@@ -146,18 +152,35 @@ thrustVec = thrustVec(thrustVecMask);
 %Final Calculations
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
 MEOP = max(chamberPressureVec);
-[exitMachNum, exhaustTemp, ~] = isentropicFunc(areaRatio); 
+[exitMachNum, exhaustTemp, ~, pressureRatioExit] = isentropicFunc(areaRatio); 
 localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
 exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
 specificImpulse = specificImpulseFunc(thrustVec, massFlowVec);
 propWeight = propDensity.*propVolume*32.174;
 averageThrust = sum(thrustVec)./length(thrustVec);
 maxThrust = max(thrustVec);
+totalImpulse = totalImpulseFunc(thrustVec);
+volumetricLoadingFraction = propVolume./chamberVolume;
+portThroatAreaRatio = portArea/throatArea;
+%massFluxVec = (massFlowVec)/(deltat*pi*(grainInnerDiameter./2)^2);
 
 %If re-calculating optimal exit Area ====> Uncomment the exit area function and the line below.
 %exitArea = exitAreaFunc(exitMachNum);
 
-
+%Motor Classification
+if totalImpulse >= 576.01 && totalImpulse <= 1151
+    rocketImpulseClass = 'L';
+elseif totalImpulse >= 1151.01 && totalImpulse <= 2302
+    rocketImpulseClass = 'M';
+elseif totalImpulse >= 2302.01 && totalImpulse <= 4604
+    rocketImpulseClass = 'N';
+elseif totalImpulse >= 4604.01 && totalImpulse <= 9208
+    rocketImpulseClass = 'O';
+elseif totalImpulse >= 9208.01 && totalImpulse <= 18400
+    rocketImpulseClass = 'P';
+else
+    rocketImpulseClass = 'Classification not in range L < motor < P.';
+end
 
 %Graphing
 figure;
@@ -171,7 +194,7 @@ plot(timeVec, thrustVec);
 title('Thrust vs. Time');
 
 %Outputs
-totalImpulse = 'test';
+totalImpulse = sprintf('Total Impulse: %.4f lbs * s', totalImpulse);
 specificImpulse = sprintf('Specific Impulse: %.4f R', specificImpulse);
 MEOP = sprintf('Maximum Expected Engine Operating Pressure: %.4f psi', MEOP);
 avgChamPressure = sprintf('Average Chamber Pressure: %.4f psi', avgChamberPressure);
@@ -179,14 +202,13 @@ maxThrust = sprintf('Maximum Thrust: %.4f lbs', maxThrust);
 avgThrust = sprintf('Average Thrust: %.4f lbs', averageThrust);
 exhaustVel = sprintf('Maximum Exhaust Velocity: %.4f ft / s', exhaustVel);
 burnTime = sprintf('Burn Time: %.4f s', time);
-maxMassFlux = 'test';
-rocketImpulseClass = 'test';
-designPressureRatio = 'test';
-portThroatAreaRatio = 'test';
+maxMassFlux = sprintf('Maximum Mass Flux: %.4f lbs / s / in ^ 2', maxMassFlux);
+rocketImpulseClass = sprintf('Motor Class: %s', rocketImpulseClass);
+designPressureRatio = sprintf('Design Pressure Ratio: %.4f', pressureRatioExit);
+portThroatAreaRatio = sprintf('Port Area to Throat Area Ratio: %.4f', portThroatAreaRatio);
 propWeight = sprintf('Propellant Weight: %.4f lbs', propWeight);
-volumetricLoadingFraction = 'test';
+volumetricLoadingFraction = sprintf('Volumetric Loading Fraction: %.4f', volumetricLoadingFraction);
 optimumAreaPerfExpansionMEOP = sprintf('Optimum Exit Area for Perfect Expansion: %.4f in ^ 2', exitArea);
-ratioInnerGrainAreaToThroatArea = 'test';
 exitMachNum = sprintf('Exit Mach Number: %.4f', exitMachNum);
 exitTemp = sprintf('Exhaust Temperature: %.4f R', exhaustTemp);
 
