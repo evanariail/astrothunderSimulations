@@ -87,6 +87,7 @@ massFlowVec = zeros(1, initialSize);
 timeVec = zeros(1, initialSize);
 thrustVec = zeros(1, initialSize);
 exitPressureVec = zeros(1, initialSize);
+massFluxVec = zeros(1, initialSize);
 
 %Iteration Loop
 while grainWidth > 0  && grainLength > 0
@@ -105,6 +106,10 @@ while grainWidth > 0  && grainLength > 0
     %Mass Flow Rate
     massFlowRate = massFlowRateFunc(burnSurfaceRegressionRate, exposedBurnArea);
     massFlowVec(i) = massFlowRate;
+
+    %Mass Flux
+    massFlux = (32.174*max(massFlowRate))/((pi/4)*(grainInnerDiameter)^2);
+    massFluxVec(i) = massFlux;
 
     %Exhaust Velocity
     [exitMachNum, exhaustTemp, exitPressure, ~] = isentropicFunc(areaRatio);
@@ -134,6 +139,7 @@ while grainWidth > 0  && grainLength > 0
         timeVec = [timeVec, zeros(1, initialSize)];
         thrustVec = [thrustVec, zeros(1, initialSize)];
         exitPressureVec = [exitPressureVec, zeros(1, initialSize)];
+        massFluxVec = [massFluxVec, zeros(1, initialSize)];
     end
 
     
@@ -148,10 +154,12 @@ timeVecMask = timeVec ~= 0;
 timeVec = timeVec(timeVecMask);
 thrustVecMask = thrustVec ~= 0;
 thrustVec = thrustVec(thrustVecMask);
+massFluxVecMask = massFluxVec ~= 0;
+massFluxVec = massFluxVec(massFluxVecMask);
 
 %Final Calculations
 avgChamberPressure = sum(chamberPressureVec)./length(chamberPressureVec);
-MEOP = max(chamberPressureVec);
+[MEOP] = max(chamberPressureVec);
 [exitMachNum, exhaustTemp, ~, pressureRatioExit] = isentropicFunc(areaRatio); 
 localSpeedOfSound = localSpeedOfSoundFunc(exhaustTemp);
 exhaustVel = exhaustVelFunc(exitMachNum, localSpeedOfSound);
@@ -162,7 +170,7 @@ maxThrust = max(thrustVec);
 totalImpulse = totalImpulseFunc(thrustVec);
 volumetricLoadingFraction = propVolume./chamberVolume;
 portThroatAreaRatio = portArea/throatArea;
-%massFluxVec = (massFlowVec)/(deltat*pi*(grainInnerDiameter./2)^2);
+maxMassFlux = max(massFluxVec);
 
 %If re-calculating optimal exit Area ====> Uncomment the exit area function and the line below.
 %exitArea = exitAreaFunc(exitMachNum);
